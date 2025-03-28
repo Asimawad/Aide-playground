@@ -1,0 +1,57 @@
+.
+├── aide
+│   ├── agent.py
+│   ├── backend
+│   │   ├── backend_anthropic.py
+│   │   ├── backend_deepseek.py
+│   │   ├── backend_gdm.py
+│   │   ├── backend_local.py
+│   │   ├── backend_openai.py
+│   │   ├── backend_openrouter.py
+│   │   ├── __init__.py
+│   │   └── utils.py
+│   ├── example_tasks
+│   │   ├── bitcoin_price
+│   │   │   └── BTC-USD.csv
+│   │   ├── bitcoin_price.md
+│   │   ├── house_prices
+│   │   │   ├── data_description.txt
+│   │   │   ├── sample_submission.csv
+│   │   │   ├── test.csv
+│   │   │   └── train.csv
+│   │   └── house_prices.md
+│   ├── __init__.py
+│   ├── interpreter.py
+│   ├── journal2report.py
+│   ├── journal.py
+│   ├── run.py
+│   └── utils
+│       ├── config.py
+│       ├── config.yaml
+│       ├── data_preview.py
+│       ├── __init__.py
+│       ├── metric.py
+│       ├── response.py
+│       ├── serialize.py
+│       ├── tree_export.py
+│       └── viz_templates
+│           ├── template.html
+│           └── template.js
+├── aide-tree.txt
+├── LICENSE
+├── managed_context
+│   └── metadata.json
+├── output.json
+├── pyenv_req.txt
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── sample_results
+│   ├── bike-sharing-demand.py
+│   └── tmdb-box-office-prediction.py
+├── setup.py
+├── test_suite_analysis
+│   └── metadata.json
+└── uv.lock
+
+10 directories, 108 files

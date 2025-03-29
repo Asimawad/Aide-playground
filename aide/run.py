@@ -90,6 +90,41 @@ def journal_to_string_tree(journal: Journal) -> str:
 
 
 def run():
+    """  Executes the main workflow for running an experiment.
+
+    This function initializes the configuration, logging, and workspace setup for the
+    experiment. It manages the agent's execution loop, handles progress tracking, and
+    ensures proper cleanup of resources. The function also provides live visualization
+    of the experiment's progress and logs the results.
+
+    Key Steps:
+    1. Load configuration and set up logging.
+    2. Prepare the agent's workspace.
+    3. Initialize the agent, interpreter, and journal.
+    4. Execute the agent's steps in a loop, updating progress and saving results.
+    5. Provide live visualization of the experiment's progress.
+    6. Perform cleanup after the experiment is complete.
+
+    Logging:
+    - Logs are saved to both a normal log file (`aide.log`) and a verbose log file
+        (`aide.verbose.log`).
+    - Console logs are filtered to show only normal logs.
+
+    Progress Visualization:
+    - A live progress panel is displayed using the `rich` library, showing task
+        descriptions, progress bars, and file paths for result visualization.
+
+    Cleanup:
+    - If no steps are executed (`global_step == 0`), the workspace directory is removed.
+
+    Raises:
+    - Any exceptions raised during the execution of the agent's steps or workspace
+        preparation will propagate to the caller.
+
+    Note:
+    - The number of steps for the agent is determined by `cfg.agent.steps`.
+    - The function ensures that the experiment's progress and results are saved
+        incrementally after each step."""
     cfg = load_cfg()
     log_format = "[%(asctime)s] %(levelname)s: %(message)s"
     logging.basicConfig(
@@ -155,12 +190,38 @@ def run():
     prog.add_task("Progress:", total=cfg.agent.steps, completed=global_step)
 
     def exec_callback(*args, **kwargs):
+        """
+        Executes the provided code using the interpreter and updates the status messages.
+
+        This function updates the status to indicate the execution and generation phases
+        while running the code through the interpreter.
+
+        Args:
+            *args: Variable length argument list to be passed to the interpreter.
+            **kwargs: Arbitrary keyword arguments to be passed to the interpreter.
+
+        Returns:
+            The result of the code execution as returned by the interpreter.
+        """
         status.update("[magenta]Executing code...")
         res = interpreter.run(*args, **kwargs)
         status.update("[green]Generating code...")
         return res
 
     def generate_live():
+        """
+        Generates a live visualization panel for the experiment progress.
+
+        This function creates a rich-text-based visualization of the current
+        experiment's progress, including task description, progress bar, status,
+        and file paths for result visualization, workspace directory, and log
+        directory. The output is formatted as a rich Panel object.
+
+        Returns:
+            Panel: A rich Panel object containing the experiment's live progress
+            visualization, including task description, progress bar, status, and
+            file paths.
+        """
         tree = journal_to_rich_tree(journal)
         prog.update(prog.task_ids[0], completed=global_step)
 

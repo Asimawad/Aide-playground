@@ -149,15 +149,14 @@ class Agent:
             f"<TOTAL_TIME_REMAINING: {format_time(tot_time_remaining)}>",
             f"<TOTAL_STEPS_REMAINING: {self.acfg.steps - self.current_step}>",
             "The code should **implement the proposed solution**, **print the value of the evaluation metric computed on a hold-out validation set**,",
-            "**AND MOST IMPORTANTLY SAVE PREDICTIONS ON THE PROVIDED UNLABELED TEST DATA IN A `submission.csv` FILE IN THE ./submission/ DIRECTORY.**",
-            "The code should be a single-file python program that is self-contained and can be executed as-is.",
+            "**AND MOST IMPORTANTLY SAVE PREDICTIONS ON THE PROVIDED UNLABELED TEST DATA IN A `submission.csv` FILE IN THE `./submission/` DIRECTORY.**",            "The code should be a single-file python program that is self-contained and can be executed as-is.",
             "No parts of the code should be skipped, don't terminate the before finishing the script.",
             "Your response should only contain a single code block.",
             f"Be aware of the running time of the code, it should complete within {humanize.naturaldelta(exec_timeout)}.",
             'All the provided input data is stored in "./input" directory.',
-            '**You MUST submit predictions on the provided unlabeled test data in a `submission.csv` file** file in the "./working" directory as described in the task description** This is extremely important since this file is used for grading/evaluation. DO NOT FORGET THE submission.csv file!',
-            'You can also use the "./working" directory to store any temporary files that your code needs to create.',
-            "REMEMBER THE ./submission/submission.csv FILE!!!!! The correct directory is important too.",
+            '**You MUST submit predictions on the provided unlabeled test data in a `submission.csv` file** file in the "./submission" directory as described in the task description** This is extremely important since this file is used for grading/evaluation. DO NOT FORGET THE submission.csv file!',
+            "You can use the `./working/` directory to store temporary files (e.g., models, intermediate data), but the final `submission.csv` MUST be in `./submission/`.",
+            "REMEMBER THE `./submission/submission.csv` FILE!!!!! The correct directory is critical for evaluation.",
         ]
         if self.acfg.expose_prediction:
             impl_guideline.append(
@@ -182,40 +181,12 @@ class Agent:
                 "There should be no additional headings or text in your response. Just natural language text followed by a newline and then the markdown code block. "
             )
         }
-    def reflection(self,code,prompt,plan):
-        # I should implement self reflection here
-        # I should check if the code is a valid python code
-        # I shoud ask the model to critique the code generated, in terms of correctness and the quality 
-        # of the code and also the correctness of the paths for the inputs and outputs (./submission/submission.csv) 
-        reflection  = completion_text = query(
-                system_message=code,
-                user_message= f"""given this context:{plan},
-                you are an expert machine learning engineer, in this initial phase, we want the code to be correct and running, we will deal with the performance and quality of results later,
-                give a good look at possible mistakes in the code, guide yourself by the initial informations that are provided here : {prompt} ensure correctness,
-                and also the correctness of the paths for the inputs and outputs (./submission/submission.csv), 
-                the idea is that we dont want sloppy mistakes, we want the code to run at least, read the inputs correctly, 
-                perform the outlined plan, and then produce a csv submission. You are encouraged to respond with three sections, 
-                1.reflect on the code and plan, 2. provide refined plan 3.refined code""",
-                model=self.acfg.code.model,
-                temperature=self.acfg.code.temp,
-                convert_system_to_user=self.acfg.convert_system_to_user,
-            )
-        return reflection
+
         
                 
     def plan_and_code_query(self, prompt, retries=3) -> tuple[str, str]:
         """Generate a natural language plan + code in the same LLM call and split them apart."""
-        impl_guideline = [
-            "The code should **implement the proposed solution**, **print the value of the evaluation metric computed on a hold-out validation set**,",
-            "**AND MOST IMPORTANTLY SAVE PREDICTIONS ON THE PROVIDED UNLABELED TEST DATA IN A `submission.csv` FILE IN THE ./submission/ DIRECTORY.**",
-            "The code should be a single-file python program that is self-contained and can be executed as-is.",
-            "No parts of the code should be skipped, don't terminate the before finishing the script.",
-            "Your response should only contain a single code block.",
-            'All the provided input data is stored in "./input" directory.',
-            '**You MUST submit predictions on the provided unlabeled test data in a `submission.csv` file** file in the "./working" directory as described in the task description** This is extremely important since this file is used for grading/evaluation. DO NOT FORGET THE submission.csv file!',
-            'You can also use the "./working" directory to store any temporary files that your code needs to create.',
-            "REMEMBER THE ./submission/submission.csv FILE!!!!! The correct directory is important too.",
-        ]
+
         completion_text = None
         for _ in range(retries):
             completion_text = query(
@@ -229,17 +200,6 @@ class Agent:
             nl_text = extract_text_up_to_code(completion_text)
 
             if code and nl_text:
-            #  I should implement self reflection here
-            #  I should check if the code is a valid python code
-                reflection = completion_text
-                for i in range(2):
-                    reflection = self.reflection(code, prompt,nl_text)
-                    code = extract_code(reflection)
-                    nl_text = extract_text_up_to_code(reflection)
-                    if reflection:
-                        break
-                    logger.info("Reflection failed, retrying...")
-
                 # merge all code blocks into a single string
                 return nl_text, code
 
@@ -387,17 +347,41 @@ class Agent:
         logger.info(f"Agent is generating code, parent node type: {type(parent_node)}")
 
         if parent_node is None:
-            # print(result_node.code) # remove later
             result_node = self._draft()
         elif parent_node.is_buggy:
             result_node = self._debug(parent_node)
         else:
             result_node = self._improve(parent_node)
+        # self reflection block
+        
+        reflection_prompt = {
+            "Introduction": "You are a Kaggle grandmaster reviewing your own Python code for a competition.",
+            "Task description": self.task_desc,
+            "Code to review": wrap_code(result_node.code),
+            "Instructions": {
+                "Review guideline": [
+                    "Ensure all necessary libraries (e.g., pandas, numpy, scikit-learn) are imported at the top.",
+                    "Verify input files are read from './input/' (e.g., './input/train.csv', './input/test.csv').",
+                    "Confirm predictions are saved to './submission/submission.csv'—check the path and file creation.",
+                    "Check for invalid or made-up methods/attributes (e.g., pandas or sklearn functions that don’t exist).",
+                    "Fix any preprocessing issues, like handling missing values for both numerical and categorical columns."
+                ],
+                "Response format": (
+                    "List specific issues found (e.g., 'Missing import pandas', 'Wrong path') in 2-3 sentences. "
+                    "Then, provide the FULL corrected code—including all imports, data loading, preprocessing, "
+                    "model training, validation, and submission saving—in a single code block. "
+                    "If no issues, say 'No issues found' and repeat the original code unchanged."
+                )
+            }
+        }
+        reflection_plan, reflection_code = self.plan_and_code_query(reflection_prompt)
+        if reflection_code:  # If DeepSeek provides a fix
+            result_node.code = reflection_code
+            logger.info(f"Node {result_node.id} self-reflected and updated code")
 
-        result_node = self.parse_exec_result(
-            node=result_node,
-            exec_result=exec_callback(result_node.code, True),
-        )
+        # Proceed with execution
+        result_node = self.parse_exec_result(node=result_node, exec_result=exec_callback(result_node.code, True))
+
         # handle final cases where we missed buggy nodes somehow
         if not result_node.is_buggy:
             if not (self.cfg.workspace_dir / "submission" / "submission.csv").exists():
@@ -468,7 +452,6 @@ class Agent:
                 convert_system_to_user=self.acfg.convert_system_to_user,
             ),
         )
-        # print("--------------------------",response) # remove later
 
         # if the metric isn't a float then fill the metric with the worst metric
         if not isinstance(response["metric"], float):

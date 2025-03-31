@@ -242,7 +242,10 @@ class Agent:
 
         if self.acfg.data_preview:
             prompt["Data Overview"] = self.data_preview
-
+        # print("____________________________________________________\n")
+        # print(f"the currently used Prompt: {compile_prompt_to_md(prompt)}")
+        # print("\n____________________________________________________\n")
+        
         plan, code = self.plan_and_code_query(prompt)
         new_node = Node(plan=plan, code=code)
         logger.info(f"Drafted new node {new_node.id}")
@@ -329,6 +332,82 @@ class Agent:
         new_node = Node(plan=plan, code=code, parent=parent_node)
         logger.info(f"Debugged node {parent_node.id} to create new node {new_node.id}")
         return new_node
+    
+    # self reflection logic
+    # def _reflect(self,code, multi_step= False, reflection_steps=3):
+    #     """Generate a natural language reflection plan + code in the same LLM call and split them apart."""
+    #     introduction = (
+    #         "You are a Kaggle grandmaster attending a competition. "
+    #         "Your task is to review your code and check for potential bugs. For example, check of the code produces a csv submission in the correct path ./submission/submission.csv file, "
+    #         "so based on the information below, you should revise it in order to fix potential bugs. "
+    #         "Your response should be an improved implementation outline in natural language,"
+    #         " followed by a single markdown code block in which you keep the parts of the code that do not need modifications, and implements the bugfix/solution where needed."
+    #         "this markdown code should be a copy of the previous code, and only modify the parts that need to be changed. in order not to induce bugs that were not in the original code."
+    #     )
+    #     prompt: Any = {
+    #         "Introduction": introduction,
+    #         "Original Task description": self.task_desc,
+    #         "Previous (not revised) implementation": wrap_code(code),
+    #         "Response format": (
+    #             "Your response should be a brief outline/sketch of (original solution + modification) in natural language (3-5 sentences), "
+    #             "followed by a single markdown code block (wrapped in ```) which implements this solution and prints out the evaluation metric. "
+    #             "There should be no additional headings or text in your response. Just natural language text followed by a newline and then the markdown code block containing the revised code. "
+    #         ),
+    #         "Instructions": {},
+    #     }
+
+    #     reflection_plan, reflection_code = self.plan_and_code_query(prompt)
+    #     return reflection_plan, reflection_code
+    def _reflect(self, code):
+        """Generate a natural language reflection plan + code in the same LLM call and split them apart."""
+        introduction = (
+            "You are a Kaggle grandmaster attending a competition. Your task is to review your code to check for potential bugs, "
+            "look at the methods and imports for possible helucinations"
+            "with particular attention to ensuring that the test dataset is not operated on using non-existent fields (e.g., some feature does not exist in the test set) and that the submission.csv file is saved correctly in the './submission/' directory. "
+            "Identify and explain any mistakes, but leave all code lines that are correct completely unchanged. "
+            "In your response, first provide a brief explanation (3–5 sentences) of the identified issues and how you fixed them, "
+            "and then output a single markdown code block that is an exact copy of the original code except for the minimal modifications necessary to correct the errors. "
+            "Do not modify any parts of the code that do not require changes."
+        )
+        prompt = {
+            "Introduction": introduction,
+            "Original Task description": self.task_desc,
+            "Previous (not revised) implementation": wrap_code(code),
+            "Response format": (
+                "Your response should be a brief outline/sketch (3–5 sentences) explaining the modifications, "
+                "followed by a single markdown code block (wrapped in ```) that is an exact copy of the original code with only the necessary changes to fix the identified bugs."
+            ),
+            "Instructions": {}
+        }
+        reflection_plan, reflection_code = self.plan_and_code_query(prompt)
+        return reflection_plan, reflection_code
+    def _multi_step_reflect(self, code, reflection_steps=3):
+        prompts = ["Reflection Iteration 1:You are a Kaggle grandmaster attending a competition. Your task is to review the provided Python code intended to solve the competition task described below. In this first round, focus on identifying obvious bugs and potential hallucinations—such as referencing non-existent fields in the test dataset or errors in saving the submission.csv file in the './submission/' directory. Use the task details from the competition description (self.task_desc) to guide your review. In your response, first provide a brief explanation (3–5 sentences) of the identified issues and the modifications you made, and then output a single markdown code block that is an exact copy of the original code with only the minimal modifications necessary to fix these bugs. Do not change any code that is already correct.",
+       "Reflection Iteration 2:Building on the code from Iteration 1, review the revised code for any residual issues. In this round, concentrate on ensuring that variable usage, data transformations, and all method imports adhere to the requirements stated in the competition description (self.task_desc). Also, check that no unintended modifications were introduced in the previous iteration. Provide a concise explanation (3–5 sentences) detailing the additional refinements you made, and then output a single markdown code block containing only the minimal modifications made relative to the Iteration 1 version.",
+        ",Reflection Iteration 3:Using the code from Iteration 2 as your starting point, perform a final, comprehensive review for complete correctness and robustness. Confirm that the code fully meets the specifications from the competition description (self.task_desc), including proper data handling, consistency in method usage, and correct creation of the submission file. Provide a brief summary (3–5 sentences) of any final corrections or enhancements, and output a single markdown code block that includes only the minimal changes from the Iteration 2 code necessary to address any remaining issues."]
+        current_code = code
+        for i in range(reflection_steps):
+            prompt = {
+                "Introduction": prompts[i],
+                "Original Task description": self.task_desc,
+                "Previous (not revised) implementation": wrap_code(current_code),
+                "Response format": (
+                    "Your response should be a brief outline/sketch (3–5 sentences) explaining the modifications, "
+                    "followed by a single markdown code block (wrapped in ```) that is an exact copy of the original code with only the necessary changes to fix the identified bugs."
+                ),
+                "Instructions": {}
+            }
+            reflection_plan, current_code = self.plan_and_code_query(prompt)
+            # Check if the code is empty or contains only whitespace
+            if not current_code.strip():
+                logger.info("Reflection code is empty or contains only whitespace.")
+                break
+            # Check if the code is the same as the previous iteration
+            if current_code == code:
+                logger.info("Reflection code is the same as the previous iteration.")
+                break
+        return reflection_plan, current_code
+
 
     def update_data_preview(
         self,
@@ -345,41 +424,29 @@ class Agent:
 
         parent_node = self.search_policy()
         logger.info(f"Agent is generating code, parent node type: {type(parent_node)}")
-
+        draft_flag = False
         if parent_node is None:
+            draft_flag = True
             result_node = self._draft()
         elif parent_node.is_buggy:
             result_node = self._debug(parent_node)
         else:
             result_node = self._improve(parent_node)
         # self reflection block
-        
-        reflection_prompt = {
-            "Introduction": "You are a Kaggle grandmaster reviewing your own Python code for a competition.",
-            "Task description": self.task_desc,
-            "Code to review": wrap_code(result_node.code),
-            "Instructions": {
-                "Review guideline": [
-                    "Ensure all necessary libraries (e.g., pandas, numpy, scikit-learn) are imported at the top.",
-                    "Verify input files are read from './input/' (e.g., './input/train.csv', './input/test.csv').",
-                    "Confirm predictions are saved to './submission/submission.csv'—check the path and file creation.",
-                    "Check for invalid or made-up methods/attributes (e.g., pandas or sklearn functions that don’t exist).",
-                    "Fix any preprocessing issues, like handling missing values for both numerical and categorical columns."
-                ],
-                "Response format": (
-                    "List specific issues found (e.g., 'Missing import pandas', 'Wrong path') in 2-3 sentences. "
-                    "Then, provide the FULL corrected code—including all imports, data loading, preprocessing, "
-                    "model training, validation, and submission saving—in a single code block. "
-                    "If no issues, say 'No issues found' and repeat the original code unchanged."
-                )
-            }
-        }
-        reflection_plan, reflection_code = self.plan_and_code_query(reflection_prompt)
-        if reflection_code:  # If DeepSeek provides a fix
-            result_node.code = reflection_code
-            logger.info(f"Node {result_node.id} self-reflected and updated code")
-
+        # if draft_flag:
+        #     reflection_plan, reflection_code = self._reflect(code=result_node.code)
+        #     if reflection_code:
+        #         result_node.code = reflection_code
+        #         result_node.plan = reflection_plan
+        #         logger.info(f"Node {result_node.id} self-reflected and updated code")
+        if draft_flag:
+            reflection_plan, reflection_code = self._multi_step_reflect(code=result_node.code)
+            if reflection_code:
+                result_node.code = reflection_code
+                result_node.plan = reflection_plan
+                logger.info(f"Node {result_node.id} self-reflected and updated code")
         # Proceed with execution
+        logger.info(f"Agent is executing code for node {result_node.id}")
         result_node = self.parse_exec_result(node=result_node, exec_result=exec_callback(result_node.code, True))
 
         # handle final cases where we missed buggy nodes somehow

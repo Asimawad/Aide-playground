@@ -160,10 +160,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 .vscode/
-
+0ne_reflection_agent.py
 workspaces
 logs
 
 .DS_STORE
 .trunk
 .qodo
+openai_AIP_KEY

@@ -45,7 +45,8 @@ agent:
 
   # LLM settings for coding
   code:
-    model: deepseek-r1:8b     # model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    model: "Qwen/Qwen2.5-Math-1.5B"
+    # "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     # model: gpt-4-turbo
     temp: 0
 

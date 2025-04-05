@@ -10,8 +10,8 @@ def determine_provider(model: str) -> str:
         return "openai"
     elif model.startswith("claude-"):
         return "anthropic"
-    elif model.startswith("deepseek"):
-        return "deepseek"
+    # elif model.startswith("deepseek"):
+    #     return "deepseek"
     elif model.startswith("gemini-"):
         return "gdm"
     # all other models are handle by local

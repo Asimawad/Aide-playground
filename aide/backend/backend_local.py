@@ -1,114 +1,83 @@
-"""Backend for Ollama model API."""
-
-import json
+# backend_local.py
 import logging
-import time
-from funcy import notnone, once, select_values
-import openai
-
-
-from aide.backend.utils import (FunctionSpec,    OutputType,    opt_messages_to_list,    backoff_create)
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
 
 logger = logging.getLogger("aide")
 
-_client: openai.OpenAI = None  # type: ignore
+class LocalLLMHandler:
+    _instance = None  # Singleton instance
 
+    def __new__(cls, model_name: str):
+        if cls._instance is None or cls._instance.model_name != model_name:
+            cls._instance = super(LocalLLMHandler, cls).__new__(cls)
+            cls._instance.model_name = model_name
+            cls._instance.tokenizer, cls._instance.model = cls._instance._load_model()
+        return cls._instance
+    
+    def _load_model(self):
+        try:
+            logger.info(f"Loading local model: {self.model_name}")
+            tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-OLLAMA_API_EXCEPTIONS = (
-    # openai.InvalidRequestError,  # Raised for invalid API requests
-    openai.AuthenticationError,  # Raised for authentication issues
-    openai.APIConnectionError,   # Raised for connection issues
-    openai.RateLimitError,       # Raised when rate limits are exceeded
-    openai.APIError,             # Raised for general API errors
-    openai.InternalServerError
-)
+            # Use BitsAndBytesConfig for quantization
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,  # Adjust dtype if needed
+            )
 
-@once
-def _setup_ollama_client():
-    global _client
-    _client = openai.OpenAI(base_url= 'http://localhost:11434/v1/' , api_key='ollama',max_retries=0)
+            model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                quantization_config=quantization_config,
+                device_map="auto"
+            )
 
+            logger.info(f"Quantized (4-bit) Local model {self.model_name} loaded successfully.")
+            return tokenizer, model
 
+        except Exception as e:
+            logger.error(f"Failed to load local model {self.model_name}: {e}")
+            raise
+    def generate_response(self, prompt: str, temperature: float = 1.0, max_tokens: int = 200):
+        try:
+            input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to("cuda")
+            output = self.model.generate(
+                input_ids,
+                max_length=max_tokens,
+                temperature=temperature,
+                do_sample=True,
+            )
+            return self.tokenizer.decode(output[0], skip_special_tokens=True)
+        except Exception as e:
+            logger.error(f"Error generating response: {e}")
+            return None
 
 def query(
     system_message: str | None,
     user_message: str | None,
-    func_spec: FunctionSpec | None = None,
+    model: str,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    func_spec: None = None,
     convert_system_to_user: bool = False,
     **model_kwargs,
-) -> tuple[OutputType, float, int, int, dict]:
-    _setup_ollama_client()
-    filtered_kwargs: dict = select_values(notnone, model_kwargs)  # type: ignore
+):
+    try:
+        if user_message is None:
+            prompt = system_message or ""
+        elif system_message is None:
+            prompt = user_message
+        else:
+            prompt = f"{system_message}\n\n{user_message}"
 
-    messages = opt_messages_to_list(system_message, user_message, convert_system_to_user=convert_system_to_user)
-    
-    # func_spec = None # edit this if you find a model that supports using tools
-    if func_spec is not None:
-        _tools = [{
-            "type": "function",
-            "function": {
-                "name": func_spec.name,
-                "description": func_spec.description,
-                "parameters": func_spec.json_schema,
-            },
-            "strict": True}]
+        llm_handler = LocalLLMHandler(model)
+        response = llm_handler.generate_response(
+            prompt,
+            temperature=temperature or 1.0,  # Default temperature
+            max_tokens=max_tokens or 1500,  # Default max_tokens
+        )
+        return response, 0.0, 0, 0, {} # Add dummy values for other return values.
 
-        # force the model the use the function
-        _tool_choice = [{
-            "type": "function",
-            "function": {"name": func_spec.name}} ]
-
-
-    t0 = time.time()
-    if func_spec is not None:
-        
-            
-        completion = backoff_create(
-        _client.chat.completions.create,
-        OLLAMA_API_EXCEPTIONS,
-        messages=messages,
-        tools = _tools,
-        tool_choice=_tool_choice,
-        **filtered_kwargs,
-    )
-        
-    else:
-        completion = backoff_create(
-        _client.chat.completions.create,
-        OLLAMA_API_EXCEPTIONS,
-        messages=messages,
-        **filtered_kwargs,
-    )
-    req_time = time.time() - t0
-
-    choice = completion.choices[0]
-    if func_spec is None:
-        output = choice.message.content
-        with open("output.json", "w") as f:
-            json.dump(messages[0], f, indent=4)
-        
-    else:
-        assert (
-            choice.message.tool_calls
-        ), f"function_call is empty, it is not a function call: {choice.message}"
-        assert (
-            choice.message.tool_calls[0].function.name == func_spec.name
-        ), "Function name mismatch"
-        try:
-            output = json.loads(choice.message.tool_calls[0].function.arguments)
-        except json.JSONDecodeError as e:
-            logger.error(
-                f"Error decoding the function arguments: {choice.message.tool_calls[0].function.arguments}"
-            )
-            raise e
-
-    in_tokens = completion.usage.prompt_tokens
-    out_tokens = completion.usage.completion_tokens
-
-    info = {
-        "system_fingerprint": completion.system_fingerprint,
-        "model": completion.model,
-        "created": completion.created,
-    }
-
-    return output, req_time, in_tokens, out_tokens, info
+    except Exception as e:
+        logger.error(f"Local query failed: {e}")
+        return None, 0.0, 0, 0, {}

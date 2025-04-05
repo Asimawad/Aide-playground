@@ -196,6 +196,7 @@ class Agent:
                 temperature=self.acfg.code.temp,
                 convert_system_to_user=self.acfg.convert_system_to_user,
             )
+            print(completion_text)
             code = extract_code(completion_text)
             nl_text = extract_text_up_to_code(completion_text)
 

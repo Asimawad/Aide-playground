@@ -45,17 +45,17 @@ agent:
 
   # LLM settings for coding
   code:
-    model: "Qwen/Qwen2.5-Math-1.5B"
+    model: deepseek-r1:latest
     # "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     # model: gpt-4-turbo
-    temp: 0
+    temp: 0.5
 
   # LLM settings for evaluating program output / tracebacks
   feedback:
     # model: MFDoom/deepseek-r1-tool-calling:1.5b
     model: o3-mini
     # model: gpt-4-turbo
-    temp: 0
+    temp: 0.5
 
   # hyperparameters for the tree search
   search:

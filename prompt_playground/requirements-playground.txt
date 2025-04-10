@@ -1,0 +1,14 @@
+# START OF NEW FILE aide-ds/prompt_playground/requirements-playground.txt
+transformers>=4.38.0
+torch>=2.0.0
+accelerate>=0.28.0
+bitsandbytes>=0.41.0 # For 4-bit loading
+rich>=13.0.0       # For nice printing
+python-dotenv>=1.0.0 # To load API keys if needed for other models later
+black>=24.0.0      # For code formatting
+# Add sentencepiece if needed by your specific tokenizer
+# sentencepiece
+
+# Include AIDE's core interpreter if running outside the main package easily
+# Otherwise, assume it can be imported if run from the project root.
+# END OF NEW FILE aide-ds/prompt_playground/requirements-playground.txt

@@ -1,0 +1,10 @@
+# START OF NEW FILE aide-ds/finetuning/requirements-finetune.txt
+transformers>=4.38.0,<4.42.0 # Pin versions for stability
+trl>=0.8.0,<0.9.0
+peft>=0.10.0,<0.12.0
+accelerate>=0.28.0
+bitsandbytes>=0.41.0
+datasets>=2.10.0
+torch>=2.0.0
+# Add other potential dependencies like sentencepiece if needed by tokenizer
+# END OF NEW FILE aide-ds/finetuning/requirements-finetune.txt

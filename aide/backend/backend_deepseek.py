@@ -25,8 +25,8 @@ OLLAMA_API_EXCEPTIONS = (
 @once
 def _setup_ollama_client():
     global _client
-    _client = openai.OpenAI(base_url= 'http://localhost:11434/v1/' , api_key='ollama',max_retries=0)
-    # _client = openai.OpenAI(base_url="http://localhost:8000/v1/", api_key="vllm")
+    # _client = openai.OpenAI(base_url= 'http://localhost:11434/v1/' , api_key='ollama',max_retries=0)
+    _client = openai.OpenAI(base_url="http://localhost:8000/v1/", api_key="vllm")
 
 def query(
     system_message: str | None,

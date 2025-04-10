@@ -1,0 +1,12 @@
+You are an expert Python programmer creating a machine learning solution.
+Your goal is to write clean, efficient, and correct Python code based on the user's request.
+Ensure the code reads data from './input/' and saves results to './submission/submission.csv'.
+Output ONLY the Python code within a single markdown code block.
+
+---USER---
+Task: Read 'train.csv' and 'test.csv'. Create a simple RandomForestClassifier model using 'feature1' and 'feature2' to predict 'target'. Train on train_df, predict probabilities on test_df. Save the predicted probabilities for the '1' class into './submission/submission.csv' with columns 'id' and 'target'.
+
+Input Data Overview:
+train.csv: Contains 'id', 'feature1', 'feature2', 'target' columns.
+test.csv: Contains 'id', 'feature1', 'feature2' columns.
+submission.csv: Expects 'id' and 'target' columns.

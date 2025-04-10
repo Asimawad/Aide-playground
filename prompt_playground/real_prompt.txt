@@ -1,0 +1,66 @@
+you are a junior data scientist who is eager to impress his boss, your task is to implement a solution to a machine learning engineering
+the problem descriotion is as follows:
+## Task goal
+
+Predicting the sales price for each house
+
+## Task evaluation
+
+Use the RMSE metric between the logarithm of the predicted and observed values.
+
+
+your boss has given you a detailed plan that if you followed step by step, with very focused and thorough attitude, will result in the desided solution, 
+your task is to closely follow the steps that your manager gave you, understand them carefully to avoid any embarresing mistaket that could lear to you getting fired!, and then implement it step by step, no rush
+
+## Managers detailed message to you :
+Hey junior!,  please implement the code for me, this is some usefull context you might need while implementing the solution "
+## Solution sketch guideline
+
+- This first solution design should be relatively simple, without ensembling or hyper-parameter optimization.
+- The solution sketch should be a list of at least 10 steps, describing how to imolement the code that will solve this task sentences.
+- Don't suggest to do EDA.
+- The data is already prepared and available in the `./input` directory. There is no need to unzip any files.
+
+- **You MUST submit predictions on the provided unlabeled test data in a `submission.csv` file** file in the "./submission" directory as described in the task description** This is extremely important since this file is used for grading/evaluation. DO NOT FORGET THE submission.csv file!
+
+- The evaluation should be based on 5-fold cross-validation but only if that's an appropriate evaluation for the task at hand.
+
+
+## Installed Packages
+
+Your solution sketch can consider any relevant machine learning packages such as: `scikit-learn`, `lightGBM`, `numpy`, `torchvision`, `torch`, `statsmodels`, `xgboost`, `torch-geometric`, `timm`, `pandas`, `bayesian-optimization`. Feel free to use any other packages too (all packages are already installed!). For neural networks we suggest using PyTorch rather than TensorFlow.
+
+# heirarchy pf the current working directory Overview
+
+```
+input/
+    data_description.txt (523 lines)
+    sample_submission.csv (1460 lines)
+    test.csv (1460 lines)
+    train.csv (1461 lines)
+submission/
+
+working/ # this is for temporary files if needed
+"
+and finally this is the plan to implement it, please do the task carefully, you are my coding hero!!
+## Instructions:
+{
+    "Step 1: Import Necessary Libraries": "Import pandas, scikit-learn, numpy for data manipulation and machine learning tasks.",
+    "Step 2: Load Training and Test Data": "Load training and test CSV files using pd.read_csv().",
+    "Step 3: Handle Missing Values": "Fill missing values in numerical features with mean/median and similarly handle categorical features with mode.",
+    "Step 4: Feature Engineering": "Create or modify features to improve model performance; examples include combining existing features or creating new ones based on domain knowledge.",
+    "Step 5: Feature Selection": "Select relevant features that are likely to impact the target variable, such as 'GrLivArea' and other significant predictors.",
+    "Step 6: Split Data into Training and Validation Sets": "Separate the dataset into training (X) and target variable (y) for model training and validation.",
+    "Step 7: Preprocess Data": "Standardize numerical features to have zero mean and unit variance for better model performance.",
+    "Step 8: Model Selection and Hyperparameter Tuning": "Use Ridge Regression with Grid Search Cross-Validation to find optimal regularization parameters.",
+    "Step 9: Evaluate Model Performance": "Assess the model using metrics like RMSE (Root Mean Squared Error) on training data after applying cross-validation.",
+    "Step 10: Make Predictions on Test Data": "Use the trained model to predict house prices for the test dataset.",
+    "Step 11: Prepare Submission File": "Format predictions into a CSV file with 'Id' and 'SalePrice' columns as required by the submission format.",
+    "Step 12: Evaluate the Model": "Finalize evaluation metrics like RMSE to understand model generalization performance on unseen data."
+}
+
+## output format, your output shoud be a json file, in which the keys are the step number from your manager, and the values are the implementations of these steps given the context that you were given by the manager.
+
+then the final task is just to simply collect all the pieces of cde you implemented as one script wrapped in ```. this step should be a pure copy paste from your json output.
+
+Remember, a json followed by a python code block

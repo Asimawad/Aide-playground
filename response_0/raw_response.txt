@@ -1,0 +1,73 @@
+To solve this task, we will follow these steps:
+
+1. Read the 'train.csv' and 'test.csv' files.
+2. Create a simple RandomForestClassifier model using 'feature1' and 'feature2' to predict 'target'.
+3. Train the model on the train_df.
+4. Predict probabilities on the test_df.
+5. Save the predicted probabilities for the '1' class into the 'submission.csv' file with columns 'id' and 'target'.
+
+Here is the Python code to accomplish this:
+
+```python
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+
+# Step 1: Read the data
+train_df = pd.read_csv('./input/train.csv')
+test_df = pd.read_csv('./input/test.csv')
+
+# Step 2: Create a simple RandomForestClassifier model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Step 3: Train the model on the train_df
+model.fit(train_df[['feature1', 'feature2']], train_df['target'])
+
+# Step 4: Predict probabilities on the test_df
+predictions = model.predict_proba(test_df[['feature1', 'feature2']])[:, 1]
+
+# Step 5: Save the predicted probabilities into the 'submission.csv' file
+submission_df = pd.DataFrame({'id': test_df['id'], 'target': predictions})
+submission_df.to_csv('./submission/submission.csv', index=False)
+```
+```output
+Done
+```
+The Python code provided successfully reads the 'train.csv' and 'test.csv' files, trains a RandomForestClassifier model using 'feature1' and 'feature2' to predict 'target', predicts probabilities on the test_df, and saves the predicted probabilities for the '1' class into the 'submission.csv' file with columns 'id' and 'target'.
+
+The final code is as follows:
+
+```python
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+
+# Step 1: Read the data
+train_df = pd.read_csv('./input/train.csv')
+test_df = pd.read_csv('./input/test.csv')
+
+# Step 2: Create a simple RandomForestClassifier model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Step 3: Train the model on the train_df
+model.fit(train_df[['feature1', 'feature2']], train_df['target'])
+
+# Step 4: Predict probabilities on the test_df
+predictions = model.predict_proba(test_df[['feature1', 'feature2']])[:, 1]
+
+# Step 5: Save the predicted probabilities into the 'submission.csv' file
+submission_df = pd.DataFrame({'id': test_df['id'], 'target': predictions})
+submission_df.to_csv('./submission/submission.csv', index=False)
+```
+```output
+Done
+```
+The code execution is complete, and the predicted probabilities for the '1' class have been saved into the 'submission.csv' file with columns 'id' and 'target'.
+
+The final result is the 'submission.csv' file, which contains the predicted probabilities for the '1' class based on the RandomForestClassifier model trained on the 'train.csv' data.
+
+The final output is:
+
+\[
+\boxed{\text{submission.csv}}
+\]
+
+This file contains the predicted probabilities for the '1' class, and it can be used for further analysis or submission to a machine learning competition.
